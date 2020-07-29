@@ -25,7 +25,8 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    pipeline = new libfreenect2::CpuPacketPipeline();
+    //pipeline = new libfreenect2::CpuPacketPipeline();
+    pipeline = new libfreenect2::OpenGLPacketPipeline();
 
     // Open and Configure the Device
     std::string serial = freenect2.getDefaultDeviceSerialNumber();
@@ -34,7 +35,7 @@ int main(int argc, char const *argv[])
     dev = freenect2.openDevice(serial, pipeline);
     std::cout << "Open Device " << serial << std::endl;
     int types = 0;
-    //types |= libfreenect2::Frame::Color;
+    types |= libfreenect2::Frame::Color;
     types |= libfreenect2::Frame::Depth;
     //types |= libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
 
@@ -58,7 +59,7 @@ int main(int argc, char const *argv[])
     config.EnableBilateralFilter = true;
     config.EnableEdgeAwareFilter = true;
     config.MinDepth = 0.3f;
-    config.MaxDepth = 12.0f;
+    config.MaxDepth = 4.5f;
     dev->setConfiguration(config);
 
     libfreenect2::Registration* registration = new libfreenect2::Registration(dev->getIrCameraParams(), dev->getColorCameraParams());
@@ -68,7 +69,8 @@ int main(int argc, char const *argv[])
 
     // get image from kinect v2
     cv::Mat color, depthImg, Ir;
-    cv::namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
+    cv::namedWindow("Color", cv::WINDOW_NORMAL);
+    cv::namedWindow("Depth", cv::WINDOW_NORMAL);
     while(framecount < framemax){
 
         start = clock();
@@ -76,31 +78,37 @@ int main(int argc, char const *argv[])
             std::cout << "timeout!" << std::endl;
             return -1;
         }
-        //libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+        end = clock();
+        std::printf("get new frame, time used %f ms\n", (double)(end - start)*1000/CLOCKS_PER_SEC);
+
+
+        libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
         // libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
         libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
         // //registration->apply(rgb, depth, &undistorted, &registered);
 
-        // cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data).copyTo(color);
+        cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data).copyTo(color);
         // // cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(Ir);
         cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthImg);
 
-        // // cv::imwrite("color.png", color);
-        // // cv::imwrite("Ir.png", Ir);
-        // // cv::imwrite("depth.png",depthImg);
-        cv::resizeWindow("MyWindow", 512, 424);
-        imshow("MyWindow", depthImg);
+        // cv::imwrite("color.png", color);
+        // cv::imwrite("Ir.png", Ir);
+        // cv::imwrite("depth.png",depthImg);
+        cv::resizeWindow("Color", 512, 424);
+        cv::resizeWindow("Depth", 512, 424);
+        imshow("Color", color);
+        imshow("Depth", depthImg);
         cv::waitKey(1);
 
         listener.release(frames);
         end = clock();
-
         std::printf("Frame count %d | Duration: %f ms | fps: %f\n", framecount, (double)(end - start)*1000/CLOCKS_PER_SEC, CLOCKS_PER_SEC/(double)(end - start));
 
         framecount++;
     }
 
-    cv::destroyWindow("MyWindow");
+    cv::destroyWindow("Depth");
+    cv::destroyWindow("Color");
 
     dev->stop();
     dev->close();
