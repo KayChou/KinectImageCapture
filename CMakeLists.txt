@@ -8,11 +8,10 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} $ENV{HOME}/lib/freenect2/lib/cmake/fr
 find_package(freenect2 REQUIRED)
 FIND_PACKAGE(OpenCV REQUIRED HINTS "$ENV{HOME}/lib/opencv3_4_11/share/OpenCV")
 
-include_directories("/usr/include/libusb-1.0/")
+INCLUDE_DIRECTORIES("/usr/include/libusb-1.0/")
+INCLUDE_DIRECTORIES("include")
 
-INCLUDE_DIRECTORIES(
-  ${freenect2_INCLUDE_DIR}
-)
+INCLUDE_DIRECTORIES( ${freenect2_INCLUDE_DIR} )
 
-add_executable(main ./main.cpp)
+add_executable(main main.cpp KinectCapture.cpp)
 target_link_libraries(main ${freenect2_LIBRARIES} ${OpenCV_LIBS})
