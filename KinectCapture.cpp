@@ -1,16 +1,57 @@
 #include "KinectCapture.h"
 
+KinectPool::KinectPool(int numOfKinects){
+    
+    if(!numOfKinects > freenect2.enumerateDevices()){
+        std::cerr << "The number of devices does not match the specified\n";
+    }
+
+    numOfKinects_ = numOfKinects;
+
+    types_ = new int[numOfKinects_];
+    serials_ = new std::string[numOfKinects_];
+    kinectThreadTask = new std::thread[numOfKinects_];
+
+    devices_ = new oneKinect*[numOfKinects_];
+    init();
+}
+
+
+KinectPool::~KinectPool(){
+    delete types_;
+    //delete serials_;
+    //delete kinectThreadTask;
+
+    for(int i=0; i<numOfKinects_; i++){
+        delete devices_[i];
+    }
+    delete devices_;
+}
+
+
+bool KinectPool::init(){
+    // for(int i=0; i<numOfKinects_; i++){
+    //     serials_[i] = freenect2.getDeviceSerialNumber(i);
+    //     oneKinect device(serials_[i]);
+    //     device.getFrameLoop();
+    // }
+    for(int i=0; i<numOfKinects_; i++){
+        serials_[i] = freenect2.getDeviceSerialNumber(i);
+        devices_[i] = new oneKinect(serials_[i], typesDefault);
+        //devices_[i]->getFrameLoop();
+        kinectThreadTask[i] = std::thread(&oneKinect::getFrameLoop, std::ref(devices_[i]));
+        kinectThreadTask[i].join();
+    }
+    return true;
+}
+
+
 oneKinect::oneKinect(std::string serial, int types){
     init(serial, types);
 }
 
 
 oneKinect::~oneKinect(){
-    dev_->stop();
-    dev_->close();
-    // delete pipeline_;
-    // delete listener_;
-    // delete registration_;
 }
 
 
@@ -40,15 +81,15 @@ bool oneKinect::init(std::string serial, int types){
 
 
 bool oneKinect::getFrameLoop(){
+    std::cout << "New thread started" << std::endl;
+    
     int framecount = 0;
 
     clock_t start, end;
-
     // get image from kinect v2
     cv::Mat color, depth;
-    cv::namedWindow("Color", cv::WINDOW_NORMAL);
-    cv::namedWindow("Depth", cv::WINDOW_NORMAL);
-   
+    cv::namedWindow(serial_+"Color", cv::WINDOW_NORMAL);
+    cv::namedWindow(serial_+"Depth", cv::WINDOW_NORMAL);
 
     while(framecount < framemax){
         start = clock();
@@ -60,14 +101,14 @@ bool oneKinect::getFrameLoop(){
         color_ = frames_[libfreenect2::Frame::Color];
         depth_ = frames_[libfreenect2::Frame::Depth];
 
-        cv::Mat(color_->height, color_->width, CV_8UC4, color_->data).copyTo(color);
-        cv::Mat(depth_->height, depth_->width, CV_8UC4, depth_->data).copyTo(depth);
+        // cv::Mat(color_->height, color_->width, CV_8UC4, color_->data).copyTo(color);
+        // cv::Mat(depth_->height, depth_->width, CV_8UC4, depth_->data).copyTo(depth);
 
-        cv::resizeWindow("Color", 512, 424);
-        cv::resizeWindow("Depth", 512, 424);
-        cv::imshow("Color", color);
-        cv::imshow("Depth", depth);
-        cv::waitKey(1);
+        // cv::resizeWindow(serial_+"Color", 512, 424);
+        // cv::resizeWindow(serial_+"Depth", 512, 424);
+        // cv::imshow(serial_+"Color", color);
+        // cv::imshow(serial_+"Depth", depth);
+        // cv::waitKey(1);
 
         listener_->release(frames_);
         end = clock();
@@ -76,6 +117,9 @@ bool oneKinect::getFrameLoop(){
         framecount++;
     }
 
-    cv::destroyWindow("Depth");
-    cv::destroyWindow("Color");
+    cv::destroyWindow(serial_+"Depth");
+    cv::destroyWindow(serial_+"Color");
+    dev_->stop();
+    dev_->close();
+    return true;
 }

@@ -10,16 +10,20 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <sys/time.h>
+#include <thread>
 
-#define framemax 360
+#define framemax 24
+#define typesDefault libfreenect2::Frame::Color | libfreenect2::Frame::Depth
+
 
 class oneKinect
 {
 public:
-    oneKinect(std::string serial, int types);
+    oneKinect();
+    oneKinect(std::string serial, int types=typesDefault);
     ~oneKinect();
 
-    bool init(std::string serial, int types);
+    bool init(std::string serial, int types=typesDefault);
     bool getFrameLoop();
 
 public:
@@ -27,6 +31,8 @@ public:
     libfreenect2::Frame *depth_;
     libfreenect2::Frame *undistorted_;
     libfreenect2::Frame *registered_;
+
+    int i=0;
 
 public:
     libfreenect2::Freenect2 freenect2_;
@@ -40,6 +46,28 @@ public:
 
     libfreenect2::Freenect2Device::Config config_;
     libfreenect2::Registration* registration_;
+};
+
+
+class KinectPool
+{
+public:
+    KinectPool(int numOfKinects);
+    ~KinectPool();
+
+    bool init();
+
+
+public:
+    int numOfKinects_;
+    int* types_;
+    std::string* serials_;
+    std::thread* kinectThreadTask;
+
+    oneKinect** devices_;
+
+    libfreenect2::Freenect2 freenect2;
+
 };
 
 #endif

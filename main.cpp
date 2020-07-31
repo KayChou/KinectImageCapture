@@ -7,22 +7,34 @@ clock_t start, end;
 
 int main(int argc, char const *argv[])
 {
-    libfreenect2::Freenect2 freenect2;
-    if(freenect2.enumerateDevices() == 0){
-        std::cout << "No device connected!\n";
-        return -1;
+    //KinectPool kinects(2);
+
+    libfreenect2::Freenect2 freenect2_;
+    int numOfKinects_ = 2;
+    if(numOfKinects_ > freenect2_.enumerateDevices()){
+        std::cerr << "The number of devices does not match the specified\n";
     }
 
-    // Open and Configure the Device
-    std::string serial = freenect2.getDefaultDeviceSerialNumber();
-	std::cout << "Kinect v2 connect successed, device num is： " << serial << std::endl;
+    int* types_;
+    std::string* serials_;
+    std::thread* kinectThreadTask;
+    oneKinect** devices_;
 
-    int types = 0;
-    types |= libfreenect2::Frame::Color;
-    types |= libfreenect2::Frame::Depth;
-    //types |= libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
-    oneKinect device(serial, types);
-    device.getFrameLoop();
-    
+    types_ = new int[numOfKinects_];
+    serials_ = new std::string[numOfKinects_];
+    kinectThreadTask = new std::thread[numOfKinects_];
+
+    devices_ = new oneKinect*[numOfKinects_];
+
+    for(int i=0; i<numOfKinects_; i++){
+        serials_[i] = freenect2_.getDeviceSerialNumber(i);
+        devices_[i] = new oneKinect(serials_[i], typesDefault);
+        //devices_[i]->getFrameLoop();
+        kinectThreadTask[i] = std::thread(&oneKinect::getFrameLoop, std::ref(devices_[i]));
+    }
+
+    for(int i=0; i<numOfKinects_; i++){
+        kinectThreadTask[i].join();
+    }
     return 0;
 }
