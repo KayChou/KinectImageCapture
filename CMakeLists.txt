@@ -16,6 +16,6 @@ INCLUDE_DIRECTORIES("include")
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-add_executable(main main.cpp KinectCapture.cpp)
+add_executable(main main.cpp KinectCapture.cpp FramePacket.cpp)
 target_link_libraries(main ${freenect2_LIBRARIES} ${OpenCV_LIBS})
 target_link_libraries(main Threads::Threads)
