@@ -8,7 +8,7 @@ clock_t start, end;
 int main(int argc, char const *argv[])
 {
     libfreenect2::Freenect2 freenect2_;
-    int numOfKinects_ = 2;
+    int numOfKinects_ = 1;
     if(numOfKinects_ > freenect2_.enumerateDevices()){
         std::cerr << "The number of devices does not match the specified\n";
         return -1;
@@ -32,7 +32,9 @@ int main(int argc, char const *argv[])
     }
 
     for(int i=0; i<numOfKinects_; i++){
-        kinectThreadTask[i].join();
+        kinectThreadTask[i].detach();
     }
+    int a;
+    std::cin >> a;
     return 0;
 }

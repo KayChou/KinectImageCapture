@@ -12,8 +12,9 @@
 #include <sys/time.h>
 #include <thread>
 #include "FramePacket.h"
+#include "PlyIO.h"
 
-#define framemax 240
+#define framemax 10000
 #define typesDefault libfreenect2::Frame::Color | libfreenect2::Frame::Depth
 
 
@@ -30,8 +31,6 @@ public:
 public:
     libfreenect2::Frame *color_;
     libfreenect2::Frame *depth_;
-    libfreenect2::Frame *undistorted_;
-    libfreenect2::Frame *registered_;
 
 public:
     libfreenect2::Freenect2 freenect2_;
