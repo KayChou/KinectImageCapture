@@ -1,14 +1,68 @@
 #include "KinectCapture.h"
 
-oneKinect::oneKinect(std::string serial, int types){
+int* types_;
+std::string* serials_;
+std::thread* kinectThreadTask;
+oneKinect** devices_;
+
+//=======================================================================================
+// Open all kinect
+//=======================================================================================
+bool openAllKinect(int numOfKinects, FIFO** output){
+    libfreenect2::Freenect2 freenect2_;
+    if(numOfKinects > freenect2_.enumerateDevices()){
+        std::cerr << "The number of devices does not match the specified\n";
+        return -1;
+    }
+
+    types_ = new int[numOfKinects];
+    serials_ = new std::string[numOfKinects];
+    kinectThreadTask = new std::thread[numOfKinects];
+    devices_ = new oneKinect*[numOfKinects];
+    
+    for(int i=0; i<numOfKinects; i++){
+        serials_[i] = freenect2_.getDeviceSerialNumber(i);
+        devices_[i] = new oneKinect(serials_[i], output[i]);
+    }
+
+    for(int i=0; i<numOfKinects; i++){
+        kinectThreadTask[i] = std::thread(&oneKinect::getFrameLoop, std::ref(devices_[i]));
+        kinectThreadTask[i].detach();
+    }
+    return true;
+}
+
+
+//=======================================================================================
+// close all kinects and free space 
+//=======================================================================================
+void destoryAllKinect(int numOfKinects){
+    delete types_;
+    
+    for(int i=0; i<numOfKinects; i++){
+        delete devices_[i];
+    }
+    delete devices_;
+}
+
+
+//=======================================================================================
+// construct one kinect
+//=======================================================================================
+oneKinect::oneKinect(std::string serial, FIFO* output, int types){
+    this->output_ = output;
     init(serial, types);
 }
 
 
 oneKinect::~oneKinect(){
+    //delete pipeline_;
 }
 
 
+//=======================================================================================
+// init one kinect
+//=======================================================================================
 bool oneKinect::init(std::string serial, int types){
     serial_ = serial;
     types_ = types;
@@ -33,22 +87,14 @@ bool oneKinect::init(std::string serial, int types){
 }
 
 
+//=======================================================================================
+// get frame and put data to FIFO
+//=======================================================================================
 bool oneKinect::getFrameLoop(){
     std::cout << "New thread started" << std::endl;
-    
     int framecount = 0;
-    
-
     clock_t start, end;
     // get image from kinect v2
-    cv::Mat color, depth, undistortion, registration;
-    cv::namedWindow(serial_+"Color", cv::WINDOW_NORMAL);
-    cv::namedWindow(serial_+"Depth", cv::WINDOW_NORMAL);
-    cv::namedWindow(serial_+"undistorted", cv::WINDOW_NORMAL);
-    cv::namedWindow(serial_+"registered", cv::WINDOW_NORMAL);
-
-    bool saveFile2Local = true;
-
     libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4), depth2rgb(1920, 1080 + 2, 4);
 
     while(framecount < framemax){
@@ -62,70 +108,40 @@ bool oneKinect::getFrameLoop(){
         depth_ = frames_[libfreenect2::Frame::Depth];
         registration_->apply(color_, depth_, &undistorted, &registered, true, &depth2rgb);
 
-        // framePacket packet(color_, depth_);
+        framePacket *packet = new framePacket();
+        packet->init(color_, depth_);
+        this->output_->put(packet);
 
-        // cv::Mat(packet.height_c, packet.width_c, CV_8UC4, packet.data_c).copyTo(color);
-        // cv::Mat(packet.height_d, packet.width_d, CV_8UC4, packet.data_d).copyTo(depth);
+#ifdef saveFile2Local 
+        float rgb;
+        Point3f p;
+        RGB tempColor;
+        std::vector<Point3f> vertices;
+        std::vector<RGB> colors;
+        for(int i=0; i<512*424; i++){
+            registration_->getPointXYZRGB(&undistorted, &registered, i/512, i%512, p.X, p.Y, p.Z, rgb);
 
-        cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data).copyTo(undistortion);
-        cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(registration);
-        cv::Mat(color_->height, color_->width, CV_8UC4, color_->data).copyTo(color);
-        cv::Mat(depth_->height, depth_->width, CV_32FC1, depth_->data).copyTo(depth);
-
-        cv::resizeWindow(serial_+"Color", 512, 424);
-        cv::resizeWindow(serial_+"Depth", 512, 424);
-        cv::resizeWindow(serial_+"undistorted", 512, 424);
-        cv::resizeWindow(serial_+"registered", 512, 424);
-        cv::imshow(serial_+"Color", color);
-        cv::imshow(serial_+"Depth", depth);
-        cv::imshow(serial_+"undistorted", undistortion);
-        cv::imshow(serial_+"registered", registration);
-        cv::waitKey(1);
-        // packet.destroy();
-
-        if(saveFile2Local){
-            float rgb;
-            Point3f p;
-            RGB tempColor;
-            std::vector<Point3f> vertices;
-            std::vector<RGB> colors;
-            for(int i=0; i<512*424; i++){
-                
-                //registration_->getPointXYZ(&undistorted, i/512, i%512, x, y, z);
-                registration_->getPointXYZRGB(&undistorted, &registered, i/512, i%512, p.X, p.Y, p.Z, rgb);
-
-                if(p.Z > 0 && p.Z < 4.5){
-                    vertices.push_back(p);
-                    const uint8_t *c = reinterpret_cast<uint8_t*>(&rgb);
-                    tempColor.B = c[0];
-                    tempColor.G = c[1];
-                    tempColor.R = c[2];
-                    colors.push_back(tempColor);
-                }
-                
+            if(p.Z > 0 && p.Z < 4.5){
+                vertices.push_back(p);
+                const uint8_t *c = reinterpret_cast<uint8_t*>(&rgb);
+                tempColor.B = c[0];
+                tempColor.G = c[1];
+                tempColor.R = c[2];
+                colors.push_back(tempColor);
             }
-            savePlyFile("pointCloud.ply", vertices, true, colors);
-            saveFile2Local = false;
-
-            cv::imwrite("color.jpg", color);
-            cv::imwrite("depth.jpg", depth);
-            cv::imwrite("undistortion.jpg", undistortion);
-            cv::imwrite("registration.jpg", registration);
-            
-        }   
+        }
+        savePlyFile("pointCloud.ply", vertices, true, colors);
+        saveFile2Local = false;
+#endif 
 
         listener_->release(frames_);
         end = clock();
-        std::printf("Frame count %d | fps: %f\n", framecount, CLOCKS_PER_SEC/(double)(end - start));
+        std::printf("Frame count %-4d | FIFO length: %-4d | fps: %f\n", framecount, output_->cnt, CLOCKS_PER_SEC/(double)(end - start));
 
         framecount++;
     }
-
-    cv::destroyWindow(serial_+"Depth");
-    cv::destroyWindow(serial_+"Color");
-    cv::destroyWindow(serial_+"undistorted");
-    cv::destroyWindow(serial_+"registered");
     dev_->stop();
     dev_->close();
+    std::printf("Thread Kinect Capture finish\n");
     return true;
 }

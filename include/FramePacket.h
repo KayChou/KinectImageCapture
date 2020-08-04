@@ -22,7 +22,8 @@ public:
     float* data_d;
 
 public:
-    framePacket(libfreenect2::Frame *color, 
+    framePacket();
+    void init(libfreenect2::Frame *color, 
                 libfreenect2::Frame *depth, 
                 int width_c=1920, 
                 int height_c=1080,

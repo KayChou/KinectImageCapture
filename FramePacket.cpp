@@ -1,11 +1,14 @@
 #include "FramePacket.h"
 
-framePacket::framePacket(libfreenect2::Frame *color, 
-                         libfreenect2::Frame *depth, 
-                         int width_c, 
-                         int height_c,
-                         int width_d,
-                         int height_d)
+framePacket::framePacket(){ }
+
+
+void framePacket::init(libfreenect2::Frame *color, 
+                       libfreenect2::Frame *depth, 
+                       int width_c, 
+                       int height_c,
+                       int width_d,
+                       int height_d)
 {
     this->width_c = width_c;
     this->height_c = height_c;
