@@ -58,9 +58,37 @@ void ImageRenderer::Draw(std::string str){
         cv::Mat(packet->height_c, packet->width_c, CV_8UC4, packet->data_c).copyTo(color);
         cv::Mat(packet->height_d, packet->width_d, CV_8UC4, packet->data_d).copyTo(depth);
 
+        end = clock();
+        fps = CLOCKS_PER_SEC/(double)(end - start);
+        cv::putText(color, "FPS: " + std::to_string(fps), cv::Point(0, 100), 2, 2, cv::Scalar(0, 255, 0), 4);
+        cv::putText(depth, "FPS: " + std::to_string(fps), cv::Point(0, 30), 2, 1, cv::Scalar(0, 255, 0));
         cv::imshow("Color" + str, color);
         cv::imshow("Depth" + str, depth);
+        start = clock();
         cv::waitKey(1);
+#if 0
+        bool save2local = true;
+        if(save2local){
+            std::vector<Point3f> vertices;
+            std::vector<RGB> colors;
+            Point3f p;
+            RGB tempColor;
+            for(int i=0; i<512*424; i++){
+                p.X =  - packet->vertices[i].X;
+                p.Y = packet->vertices[i].Y;
+                p.Z = packet->vertices[i].Z;
+                if(p.Z > 0 && p.Z < 4.5){
+                    vertices.push_back(p);
+                    tempColor.B = packet->vertices[i].B;
+                    tempColor.G = packet->vertices[i].G;
+                    tempColor.R = packet->vertices[i].R;
+                    colors.push_back(tempColor);
+                }
+            }
+            savePlyFile("pointCloud.ply", vertices, true, colors);
+            save2local = false;
+        }
+#endif
         packet->destroy();
     }
     cv::destroyAllWindows();

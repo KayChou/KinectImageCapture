@@ -19,6 +19,8 @@ public:
     cv::Mat color;
     cv::Mat depth;
     FIFO* input_;
+    clock_t start=clock(), end=clock();
+    double fps;
 };
 
 #endif

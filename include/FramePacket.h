@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
+#include "PlyIO.h"
 
 class framePacket{
 
@@ -20,11 +21,13 @@ public:
 
     unsigned char* data_c;
     float* data_d;
+    Point3fRGB *vertices;
 
 public:
     framePacket();
     void init(libfreenect2::Frame *color, 
                 libfreenect2::Frame *depth, 
+                Point3fRGB* verts,
                 int width_c=1920, 
                 int height_c=1080,
                 int width_d=512,

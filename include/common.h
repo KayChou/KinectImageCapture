@@ -6,12 +6,13 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 
 #include "FIFO.h"
 #include "FramePacket.h"
-#include "PlyIO.h"
 
-#define framemax 500
+#define framemax 10
 #define FIFO_LEN 30
 #define typesDefault libfreenect2::Frame::Color | libfreenect2::Frame::Depth
 

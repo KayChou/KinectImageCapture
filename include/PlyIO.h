@@ -18,6 +18,22 @@ struct Point3f {
     float X, Y, Z;
 };
 
+
+typedef struct Point3fRGB { 
+    Point3fRGB() {
+        this->X = 0;
+        this->Y = 0;
+        this->Z = 0;
+        this->R = 0;
+        this->G = 0;
+        this->B = 0;
+    }
+    float X, Y, Z;
+    uint8_t R, G, B;
+} Point3fRGB;
+
+
+
 struct TriIndex {
 	TriIndex() {
 		this->v1 = 0;

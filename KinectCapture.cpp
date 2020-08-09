@@ -98,7 +98,7 @@ bool oneKinect::getFrameLoop(){
     libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4), depth2rgb(1920, 1080 + 2, 4);
 
     while(framecount < framemax){
-        start = clock();
+        //start = clock();
         if (!listener_->waitForNewFrame(frames_, 10*1000)) { // 10 seconds
             std::cout << "timeout!" << std::endl;
             return -1;
@@ -108,36 +108,26 @@ bool oneKinect::getFrameLoop(){
         depth_ = frames_[libfreenect2::Frame::Depth];
         registration_->apply(color_, depth_, &undistorted, &registered, true, &depth2rgb);
 
-        framePacket *packet = new framePacket();
-        packet->init(color_, depth_);
-        this->output_->put(packet);
-
-#ifdef saveFile2Local 
+        Point3fRGB *vertices = new Point3fRGB[depth_->width * depth_->height];
         float rgb;
-        Point3f p;
-        RGB tempColor;
-        std::vector<Point3f> vertices;
-        std::vector<RGB> colors;
-        for(int i=0; i<512*424; i++){
-            registration_->getPointXYZRGB(&undistorted, &registered, i/512, i%512, p.X, p.Y, p.Z, rgb);
+        for(int i=0; i < depth_->width * depth_->height; i++){
+            registration_->getPointXYZRGB(&undistorted, &registered, i/512, i%512, vertices[i].X, vertices[i].Y, vertices[i].Z, rgb);
 
-            if(p.Z > 0 && p.Z < 4.5){
-                vertices.push_back(p);
+            if(vertices[i].Z > 0 && vertices[i].Z < 4.5){
                 const uint8_t *c = reinterpret_cast<uint8_t*>(&rgb);
-                tempColor.B = c[0];
-                tempColor.G = c[1];
-                tempColor.R = c[2];
-                colors.push_back(tempColor);
+                vertices[i].B = c[0];
+                vertices[i].G = c[1];
+                vertices[i].R = c[2];
             }
         }
-        savePlyFile("pointCloud.ply", vertices, true, colors);
-        saveFile2Local = false;
-#endif 
+
+        framePacket *packet = new framePacket();
+        packet->init(color_, &undistorted, vertices);
+        this->output_->put(packet);
 
         listener_->release(frames_);
-        end = clock();
-        std::printf("Frame count %-4d | FIFO length: %-4d | fps: %f\n", framecount, output_->cnt, CLOCKS_PER_SEC/(double)(end - start));
-
+        //end = clock();
+        //std::printf("Frame count %-4d | FIFO length: %-4d | fps: %f\n", framecount, output_->cnt, CLOCKS_PER_SEC/(double)(end - start));
         framecount++;
     }
     dev_->stop();

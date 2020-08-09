@@ -15,11 +15,10 @@ int main(int argc, char const *argv[])
     }
     
     openAllKinect(numOfKinects, RGBD_Acquisition);
-    //saveRGBDFIFO2Image(RGBD_Acquisition, numOfKinects);
-    startAllImageRender(numOfKinects, RGBD_Acquisition);
+    saveRGBDFIFO2Image(RGBD_Acquisition, numOfKinects);
+    //startAllImageRender(numOfKinects, RGBD_Acquisition);
 
     getchar(); // block main thread
-    
     destoryAllKinect(numOfKinects);
 
     // delete FIFO ptr
