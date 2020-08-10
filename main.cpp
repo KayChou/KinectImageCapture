@@ -1,6 +1,7 @@
 #include <iostream>
 #include "KinectCapture.h"
-#include "imageRender.h"
+//#include "imageRender.h"
+#include "calibration.h"
 #include "utils.h"
 
 #define numOfKinects 2
@@ -14,12 +15,17 @@ int main(int argc, char const *argv[])
         RGBD_Acquisition[i]->init(FIFO_LEN);
     }
     
-    openAllKinect(numOfKinects, RGBD_Acquisition);
-    saveRGBDFIFO2Image(RGBD_Acquisition, numOfKinects);
+    if(!openAllKinect(numOfKinects, RGBD_Acquisition)){
+        return -1;
+    }
+    //saveRGBDFIFO2Image(RGBD_Acquisition, numOfKinects);
+    //saveRGBDFIFO2PLY(RGBD_Acquisition, numOfKinects);
     //startAllImageRender(numOfKinects, RGBD_Acquisition);
+    startAllCalibration(numOfKinects, RGBD_Acquisition);
 
     getchar(); // block main thread
     destoryAllKinect(numOfKinects);
+    destoryAllCalibration(numOfKinects);
 
     // delete FIFO ptr
     for(int i=0; i<numOfKinects; i++){

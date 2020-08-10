@@ -12,7 +12,7 @@ bool openAllKinect(int numOfKinects, FIFO** output){
     libfreenect2::Freenect2 freenect2_;
     if(numOfKinects > freenect2_.enumerateDevices()){
         std::cerr << "The number of devices does not match the specified\n";
-        return -1;
+        return false;
     }
 
     types_ = new int[numOfKinects];
@@ -110,17 +110,26 @@ bool oneKinect::getFrameLoop(){
 
         Point3fRGB *vertices = new Point3fRGB[depth_->width * depth_->height];
         float rgb;
+        int nanCnt = 0;
         for(int i=0; i < depth_->width * depth_->height; i++){
             registration_->getPointXYZRGB(&undistorted, &registered, i/512, i%512, vertices[i].X, vertices[i].Y, vertices[i].Z, rgb);
 
-            if(vertices[i].Z > 0 && vertices[i].Z < 4.5){
+            if(std::isnan(vertices[i].X) | std::isnan(vertices[i].Y) | std::isnan(vertices[i].Z)){
+                vertices[i].X = 0;
+                vertices[i].Y = 0;
+                vertices[i].Z = 0;
+                nanCnt ++;
+            }
+
+            //if(vertices[i].Z > 0 && vertices[i].Z < 4.5){
                 const uint8_t *c = reinterpret_cast<uint8_t*>(&rgb);
                 vertices[i].B = c[0];
                 vertices[i].G = c[1];
                 vertices[i].R = c[2];
-            }
+            //}
         }
 
+        std:printf("frame: %d has %d nan pixels\n", framecount, nanCnt);
         framePacket *packet = new framePacket();
         packet->init(color_, &undistorted, vertices);
         this->output_->put(packet);

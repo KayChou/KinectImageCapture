@@ -7,7 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
-#include "PlyIO.h"
+#include "typedefs.h"
 
 class framePacket{
 
